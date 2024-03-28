@@ -1,0 +1,16 @@
+{
+  "name": "youtube-with-node",
+  "version": "1.0.0",
+  "description": "A backend project using Node",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "backend",
+    "node"
+  ],
+  "author": "Aamir Shaikh",
+  "license": "ISC"
+}
