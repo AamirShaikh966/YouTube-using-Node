@@ -9,7 +9,7 @@ const userSchema = new Schema(
       required: true,
       unique: true,
       lowercase: true,
-      trim: true,
+      trim: true, //Trim() method will remove the white space from the starting and ending of the string
       index: true
     },
     email: {
@@ -49,17 +49,24 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
+// Firstly this function will be called whenever the saving the data
 userSchema.pre("save", async function(next) {
+  // If password has not been modified then it will go to the next functionality
   if (!this.isModified("password")) return next();
 
-  this.password = bcrypt.hash(this.password, 10);
+  // If password has been modified then it will encrypt it using 10 rounds
+  // Once password has been encrypted using bcrypt.hash method then we can not get the password in human readable format
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
+// When user is logging in then this method will check that user is entered correct password or not
 userSchema.methods.isPasswordCorrect = async function(password) {
+  // User entered password = encrypted password that were created by bcrypt.hash
   return await bcrypt.compare(password, this.password);
 };
 
+// Generating the access token
 userSchema.methods.generateAccessToken = async function() {
   return await jwt.sign(
     {
@@ -75,6 +82,7 @@ userSchema.methods.generateAccessToken = async function() {
   );
 };
 
+// Generating the refresh token
 userSchema.methods.generateRefreshToken = async function() {
   return await jwt.sign(
     {

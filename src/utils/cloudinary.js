@@ -1,3 +1,4 @@
+// For uploading the images to the cloudinary
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 
