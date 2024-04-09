@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import jwt from " jsonwebtoken";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
@@ -30,7 +30,7 @@ const userSchema = new Schema(
       required: [true, "Password is Required"]
     },
     avatar: {
-      typr: String, // Used cloudinary services to get the URL
+      type: String, // Used cloudinary services to get the URL
       required: true
     },
     coverImage: {
