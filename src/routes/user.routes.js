@@ -1,10 +1,15 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import {
+  registerUser,
+  loginUser,
+  logoutUser
+} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// This function will call then user goes to the register page
+// This function will call when user goes to the register page
 router.route("/register").post(
   upload.fields([
     {
@@ -19,4 +24,9 @@ router.route("/register").post(
   registerUser
 );
 
+// This function will call when user goes to the login page
+router.route("/login").post(loginUser);
+
+// This function will call when user logout
+router.route("/logout").post(verifyJWT, logoutUser);
 export default router;
