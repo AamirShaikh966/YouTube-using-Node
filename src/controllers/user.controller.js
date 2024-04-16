@@ -23,7 +23,7 @@ const generatingAccessAndRefreshToken = async userId => {
     // Add the refreshToken to the user object
     user.refreshToken = refreshToken;
 
-    // When we try to save the object in database using save() method then it will kickin the whole user model and validate the fields (ex. It will check for password that were required). So we are using validateBeforeSave() method which is false. This method will not validate the required fields that are in the user.models.js file. It will directly save the user data in to the database without applying the validations.
+    // When we try to save the object in database using save() method then it will kickin(called) the whole user model and validate the fields (ex. It will check for password that were required). So we are using validateBeforeSave() method which is false. This method will not validate the required fields that are in the user.models.js file. It will directly save the user data in to the database without applying the validations.
     await user.save({ validateBeforeSave: false });
 
     // Returnig both the tokens
@@ -113,17 +113,14 @@ export const registerUser = asyncHandler(async (req, res) => {
     avatar: avatar.url,
     coverImage: coverImage.url || ""
   });
-  console.log(
-    "This is coming from USER Variable from user.controller.js : \n",
-    user
-  );
+  console.log("User has been created : \n", user);
 
   //////// Remove password and refresh token fields from the response
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
   console.log(
-    "This is coming from CREATEDUSER variable from user.controller.js : \n",
+    "Removed the password & refreshToken while sending the response  : \n",
     createdUser
   );
 
@@ -218,6 +215,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, {}, "User logged out "));
 });
 
+// Refreshing access token
 export const refreshAccessToken = asyncHandler(async (req, res) => {
   try {
     const incomingRefreshToken =
@@ -261,6 +259,121 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new apiError(401, error.message || "Invalid refresh token");
   }
+});
+
+// Change password functionality
+export const changeCurrentPassword = asyncHandler(async (req, res) => {
+  // Take the oldPassword and newPassword from the user
+  const { oldPassword, newPassword } = req.body;
+
+  // Find that user by id of the user from the "User"
+  const user = await User.findById(req.user._id);
+
+  // Check if oldPassword is correct or not (This variable hold the true or false value)
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  // If oldPassword is false then it will throw the error
+  if (!isPasswordCorrect) throw new apiError(400, "Invalid old password");
+
+  // Set the newPassword in to the users password field
+  user.password = newPassword;
+
+  // Save the data without applying the validations
+  user.save({ validateBeforeSave: false });
+
+  // Return the response
+  return res
+    .status(200)
+    .json(new apiResponse(200, {}, "Password changed successfully"));
+});
+
+// Get current loggedin user functionality
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new apiResponse(200, req.user, "Current user fetched successfully"));
+});
+
+// Update account details functionality
+export const updateAccountDetails = asyncHandler(async (req, res) => {
+  // Get the fullName and email from the user for updation
+  const { fullName, email } = req.body;
+
+  // If any of the fields are empty then throw error
+  if (!fullName || !email) throw new apiError(400, "All fields are required");
+
+  // Find the user from the "User" and update the fullName and email using $set method
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        fullName,
+        email
+      } // $set method will set the updated values in to the database and update it
+    },
+    { new: true } // new:true :->it will return the new updated data from the database after the updation
+  ).select("-password");
+
+  // Return the response if account details has been successfully updated
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Account details updated successsfully"));
+});
+
+// Update the avatar functionality
+export const updateUserAvatar = asyncHandler(async (req, res) => {
+  // Get the path of the avatar from the user
+  const avatarLocalPath = req.file.path;
+
+  // If avatar path is invalid then throw error
+  if (!avatarLocalPath) throw new apiError(400, "Avatar file is missing");
+
+  // Upload the avatar file on cloudinary using uploadOnCloudinary function that were present in to the utils/cloudinary.js
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  // Error if url of avatar has not been generated
+  if (!avatar.url) throw new apiError(400, "Error while uploading the avatar");
+
+  // Find the user and update the avatar url
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: { avatar: avatar.url }
+    },
+    { new: true }
+  ).select("-password");
+
+  // Return the response to the user
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Avatar file updated successfully"));
+});
+
+// Update the cover image functionality
+export const updateCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file.path;
+
+  if (!coverImageLocalPath)
+    throw new apiError(400, "Cover image file is missing");
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage.url)
+    throw new apiError(400, "Error while uploading the cover image");
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        coverImage: coverImage.url
+      }
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Cover image file updated successfully"));
 });
 
 // If we export the function in curly braces then we must import it using curly braces
