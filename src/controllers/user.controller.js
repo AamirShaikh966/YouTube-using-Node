@@ -1,7 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiError } from "../utils/apiErrors.js";
 import { User } from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary
+} from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -328,6 +331,29 @@ export const updateUserAvatar = asyncHandler(async (req, res) => {
   // If avatar path is invalid then throw error
   if (!avatarLocalPath) throw new apiError(400, "Avatar file is missing");
 
+  ///////////This delete method is from someone from the github if something went wrong then comment this code and uncomment the below code////////////
+
+  const user = await User.findById(req.user._id).select(
+    "-password -refreshToken"
+  );
+
+  const oldFileToBeDeleted = await deleteFromCloudinary(user.avatar);
+
+  if (!oldFileToBeDeleted)
+    throw new apiError(400, "Error while updating the avatar");
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  user.avatar = avatar.url;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Avatar image updated successfully"));
+  //////////////////////
+
+  /* 
   // Upload the avatar file on cloudinary using uploadOnCloudinary function that were present in to the utils/cloudinary.js
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
@@ -346,7 +372,7 @@ export const updateUserAvatar = asyncHandler(async (req, res) => {
   // Return the response to the user
   return res
     .status(200)
-    .json(new apiResponse(200, user, "Avatar file updated successfully"));
+    .json(new apiResponse(200, user, "Avatar file updated successfully"));*/
 });
 
 // Update the cover image functionality
@@ -356,6 +382,29 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
   if (!coverImageLocalPath)
     throw new apiError(400, "Cover image file is missing");
 
+  ///////////This delete method is from someone from the github if something went wrong then comment this code and uncomment the below code////////////
+
+  const user = await User.findById(req.user._id).select(
+    "-password -refreshToken"
+  );
+
+  const oldFileToBeDeleted = await deleteFromCloudinary(user.avatar);
+
+  if (!oldFileToBeDeleted)
+    throw new apiError(400, "Error while updating the cover image");
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  user.coverImage = coverImage.url;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Cover image updated successfully"));
+  //////////////////////
+
+  /*
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!coverImage.url)
@@ -374,6 +423,7 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiResponse(200, user, "Cover image file updated successfully"));
+     */
 });
 
 // If we export the function in curly braces then we must import it using curly braces

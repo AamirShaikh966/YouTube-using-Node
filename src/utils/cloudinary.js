@@ -34,4 +34,16 @@ export const uploadOnCloudinary = async localFilePath => {
   }
 };
 
-// export { uploadOnCloudinary };
+// Delete the files from the cloudinary while updating the files
+export const deleteFromCloudinary = async (url, resourceType = "image") => {
+  const publicId = extractPublicId(url);
+  try {
+    const response = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType
+    });
+    return response;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
