@@ -17,7 +17,7 @@ export const uploadOnCloudinary = async localFilePath => {
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto"
     });
-
+  
     // File has been successfully uploaded
     // console.log("File is uploaded successfully : ", response.url);
 
@@ -37,13 +37,16 @@ export const uploadOnCloudinary = async localFilePath => {
 // Delete the files from the cloudinary while updating the files
 export const deleteFromCloudinary = async (url, resourceType = "image") => {
   const publicId = extractPublicId(url);
+
   try {
     const response = await cloudinary.uploader.destroy(publicId, {
       resource_type: resourceType
     });
+
     return response;
   } catch (error) {
     console.log(error);
+
     return null;
   }
 };

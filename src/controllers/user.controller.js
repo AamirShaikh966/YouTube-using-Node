@@ -7,6 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 // Function to generate the refresh and access token
 const generatingAccessAndRefreshToken = async userId => {
@@ -424,6 +425,141 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new apiResponse(200, user, "Cover image file updated successfully"));
      */
+});
+
+// User / Channel profile functionality
+export const getUserChannelProfile = asyncHandler(async (req, res) => {
+  // Get the username by using params
+  const { userName } = req.params;
+
+  // Throw error if username is missing
+  if (!userName.trim()) throw new apiError(400, "Username is missing");
+
+  // MongoDB aggregation pipeline starts
+  const channel = await User.aggregate([
+    // match the username from the database
+    {
+      $match: {
+        userName: userName.toLowerCase()
+      }
+    },
+    // Fetch who is the subscribers of the user from subscription.models.js _id and foreign field is channel as subscribers
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers"
+      }
+    },
+    // Fetch in which channel user has been subscribed to using subscription.models.js _id and foreign field is subscriber as subscribedTo
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo"
+      }
+    },
+    // Add other fields
+    // 1. Subscribers count of the channel
+    // 2. Channels in which user has been subscribed to
+    // 3. Subscribed or not?
+    {
+      $addFields: {
+        subscribersCount: {
+          size: "$subscribers"
+        },
+        channelsSubscribedToCount: {
+          size: "$subscribedTo"
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false
+          }
+        }
+      }
+    },
+    // This are the fields that is displayed on User / Channel profile page
+    {
+      $project: {
+        fullName: 1,
+        userName: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        coverImage: 1,
+        avatar: 1,
+        email: 1,
+        createdAt: 1
+      }
+    }
+  ]);
+
+  // Throw error if channel does not exist
+  if (!channel.length) throw new apiError(404, "Channel does not exist");
+
+  // Return the response to the user and send only 0th index data
+  return res
+    .status(200)
+    .json(
+      new apiResponse(200, channel[0], "User channel fetched successfully")
+    );
+});
+
+// User's Watch history functionality
+export const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(req.user._id) }
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    avatar: 1,
+                    userName: 1,
+                    fullName: 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch history fetched successfully"
+      )
+    );
 });
 
 // If we export the function in curly braces then we must import it using curly braces
