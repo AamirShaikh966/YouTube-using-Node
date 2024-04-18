@@ -14,9 +14,6 @@ const generatingAccessAndRefreshToken = async userId => {
   try {
     // Find the user by using userId of the user from the User(which is in user.models.js file)
     const user = await User.findById(userId);
-    // console.log(
-    //   `This is user that we were found by using id of the user :\n ${user}`
-    // );
 
     // Call the methods  to generate the tokens and store it in a seperate variable
     const accessToken = user.generateAccessToken();
@@ -48,13 +45,6 @@ export const registerUser = asyncHandler(async (req, res) => {
   // Storing every field in a seperate variable
   const { fullName, email, userName, password } = req.body;
 
-  // console.log(`
-  //   Fullname is: ${fullName}\n
-  //   Email is: ${email}\n
-  //   Username is: ${userName}\n
-  //   Password is: ${password}
-  // `);
-
   //////// Validate the details like each field must not empty
   const validation =
     fullName === "" || email === "" || userName === "" || password === "";
@@ -69,8 +59,6 @@ export const registerUser = asyncHandler(async (req, res) => {
     $or: [{ userName }, { email }]
   }); // If true means user exists else false
 
-  // console.log(`Existed user : ${existedUSer}`);
-
   if (existedUSer)
     // Throwing the error if user already been exist
     throw new apiError(
@@ -79,13 +67,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     );
 
   //////// Check for images and avatar
-  // console.log("This is request.files", req.files);
-
   const avatarLocalPath = req.files.avatar[0].path;
-  // console.log("Avatar file local path",avatarLocalPath);
-
-  // const coverImageLocalPath = req.files.coverImage[0].path;
-  // console.log("Cover image file local path",coverImageLocalPath);
 
   // This is for checking if cover image is empty
   let coverImageLocalPath;
@@ -101,10 +83,8 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   //////// Upload them to the cloudinary
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  // console.log(avatar);
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-  // console.log(coverImage);
 
   if (!avatarLocalPath) throw new apiError(400, "Avatar file is required");
 
@@ -117,15 +97,10 @@ export const registerUser = asyncHandler(async (req, res) => {
     avatar: avatar.url,
     coverImage: coverImage.url || ""
   });
-  console.log("User has been created : \n", user);
 
   //////// Remove password and refresh token fields from the response
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
-  );
-  console.log(
-    "Removed the password & refreshToken while sending the response  : \n",
-    createdUser
   );
 
   //////// Check if user has been created or not??
@@ -200,8 +175,8 @@ export const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined
+      $unset: {
+        refreshToken: 1
       }
     },
     { new: true }
@@ -433,7 +408,7 @@ export const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { userName } = req.params;
 
   // Throw error if username is missing
-  if (!userName.trim()) throw new apiError(400, "Username is missing");
+  if (!userName) throw new apiError(400, "Username is missing");
 
   // MongoDB aggregation pipeline starts
   const channel = await User.aggregate([
